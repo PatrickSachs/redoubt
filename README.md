@@ -86,6 +86,7 @@ See the `/example/index.js` file for a complete development server example.
  * *I'm getting an error about greenlock TOS!* - Please read about the `agreeGreenlockTos` option.
  * *My development server is "Not Secure"!* - This is expected. Let's Encrypt can't issue certificates for `localhost`. As long as the `domains` option if correct on your production server it will work there.
  * *I don't want to use port 443 & 80!* - The `listen(https: number, http: number | null)` function allows you to customize the ports. You can also pass null as second parameter to disable the HTTP server redirection.
+ * *How do I access the user session data?* - See the express-session documentation: https://www.npmjs.com/package/express-session
 
 ## Contributing
 
