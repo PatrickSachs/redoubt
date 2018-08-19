@@ -4,6 +4,7 @@
   "description": "redoubt is a simple, yet powerful & secure express based server.",
   "main": "index.js",
   "private": true,
+  "repository": "https://github.com/PatrickSachs/redoubt",
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",
