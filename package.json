@@ -1,0 +1,30 @@
+{
+  "name": "redoubt",
+  "version": "1.0.0",
+  "description": "redoubt is a simple, yet powerful & secure express based server.",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "publish": "node prepublish && npm run build && npm publish ./dist",
+    "pack": "node prepublish && npm run build && npm pack ./dist"
+  },
+  "author": "Patrick Sachs",
+  "license": "MIT",
+  "dependencies": {
+    "compression": "^1.7.3",
+    "express": "^4.16.3",
+    "express-session": "^1.15.6",
+    "greenlock-express": "^2.4.3",
+    "spdy": "^3.4.7",
+    "typescript": "^3.0.1"
+  },
+  "devDependencies": {
+    "@types/compression": "0.0.36",
+    "@types/express": "^4.16.0",
+    "@types/express-session": "^1.15.10",
+    "@types/spdy": "^3.4.4",
+    "fs-extra": "^7.0.0"
+  }
+}

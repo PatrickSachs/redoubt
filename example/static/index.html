@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>redoubt</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.1/css/bulma.min.css">
+</head>
+
+<body>
+  <div class="container" style="margin-top: 20px">
+    <div class="tile is-ancestor">
+      <div class="tile is-vertical is-8">
+        <div class="tile">
+          <div class="tile is-parent is-vertical">
+            <article class="tile is-child notification is-primary">
+              <p class="title">redoubt 🏰</p>
+              <p class="subtitle">redoubt is a simple, yet powerful &amp; secure
+                <a href="https://github.com/expressjs/express" target="_blank">express</a> based server.
+                <br/>
+              </p>
+              <div class="content">
+                Free SSL certificates powered by
+                <a href="https://letsencrypt.org/" target="_blank">Let's Encrypt</a> built in!
+              </div>
+            </article>
+            <article class="tile is-child notification is-warning">
+              <p class="title">Run this example:</p>
+              <pre class="content">$ node example</pre>
+            </article>
+          </div>
+          <div class="tile is-parent">
+            <article class="tile is-child notification is-info">
+              <p class="title">index.html</p>
+              <p class="subtitle">Part of the example</p>
+              <figure class="image is-4by3">
+                <img src="https://picsum.photos/640/480?random">
+              </figure>
+            </article>
+          </div>
+        </div>
+        <div class="tile is-parent">
+          <article class="tile is-child notification is-danger">
+            <p class="title">🌟 redoubt on GitHub</p>
+            <p class="subtitle">Click here:
+              <a href="https://github.com/PatrickSachs/redoubt" target="_blank">https://github.com/PatrickSachs/redoubt</a>
+            </p>
+          </article>
+        </div>
+      </div>
+      <div class="tile is-parent">
+        <article class="tile is-child notification is-success">
+          <div class="content">
+            <p class="title">Easy to get started!</p>
+            <pre class="content" style="color:black">// Pass some options! ⚙️
+const server = new Server({
+  name: "my-redoubt-server",
+  certs: "letsEncrypt",
+  agreeGreenlockTos: true,
+  staticFiles: { 
+    from: path.resolve(__dirname, "./static"), 
+    serve: "/" 
+  },
+  cookieSecret: "maggots-at-the-party",
+  domains: ["example.org"],
+  webmasterMail: "webmaster@example.org"
+});
+// Express app exposed via "app" 👍
+server.app.get("/api/data", (req, res) => 
+  res
+  .json({ values: ["express", "test"] })
+  .end());
+// Let's rock! 🤘
+server.listen();</pre>
+          </div>
+        </article>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>
