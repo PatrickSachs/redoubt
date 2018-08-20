@@ -10,6 +10,7 @@ I recently came to realize that most of my projects incorporating a web server e
  * A URL Encoded Parser
  * A static file directory somewhere
  * An (optional) cookie based session storage
+ * Proper compression for all files & data
  * And last but not least SSL certificates
 
 The first four are rather trivial to set up, the last one would travidionally be a bit tricky and/or costly. 

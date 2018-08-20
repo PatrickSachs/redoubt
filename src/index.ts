@@ -4,7 +4,6 @@ import greenlock from "greenlock-express";
 import compression from "compression";
 import { EventEmitter } from "events";
 import session from "express-session";
-import path from "path";
 
 class Server extends EventEmitter {
   constructor(options: Partial<IOptions>) {
@@ -20,7 +19,6 @@ class Server extends EventEmitter {
   private _server: any = null;
   private _portHttp: number | null = null;
   private _portHttps: number | null = null;
-  //private _apiFunctions: ApiFunction[] = [];
 
   // ========================================
   // PUBLIC API
@@ -31,16 +29,6 @@ class Server extends EventEmitter {
   public get app() {
     return this._app;
   }
-
-  // APIs
-
-  /* public api(_name: string, api: ApiFunction) {
-     this._options.debug && this._options.debug("info", "Installing API", _name);
-   }*/
-
-  /*public on(event: "before-listen" | "after-listen" | "before-install" | "after-install", handler: (server: Server) => void) {
-
-  }*/
 
   // Lifecycle
 
@@ -53,7 +41,6 @@ class Server extends EventEmitter {
     this._portHttp = http;
     this._portHttps = https;
 
-    // Install APIs. Registered in the api() function.
     await this.startListening();
   }
 
