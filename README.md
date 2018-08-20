@@ -4,7 +4,7 @@ redoubt is a simple, yet powerful & secure [express](https://github.com/expressj
 
 ## Why?
 
-I recently cam to realize that most of my projects incorporating a web server end up containing the exact same server boilerplate code:
+I recently came to realize that most of my projects incorporating a web server end up containing the exact same server boilerplate code:
 
  * A JSON Body Parser
  * A URL Encoded Parser
@@ -41,7 +41,7 @@ const server = new Redoubt({
   webmasterMail: "the-webmaster-mail@patrick-sachs.de"
   // We also serve some static files
   staticFiles: { from: path.resolve(__dirname, "./static"), serve: "/" },
-  // 
+  // The cookie on the client side(contains the session ID) is obfuscated with this secret.
   cookieSecret: "maggots-at-the-party",
 });
 // Express app exposed via "app" - Set up your actual server here!
@@ -73,6 +73,7 @@ See the `/example/index.js` file for a complete development server example.
 | `name` | The name of your server. Currently only used for the name of the session cookie, but this might change in the future. | `string` | ✔️ Required |
 | `domains` | The domain names the Let's Encrypt certificates should be issued against. The first value is your primary domain. Must all be valid, resolvable FQDNs. Simply pass `localhost` in a development envrionment. | `string[]` | ✔️ Required |
 | `webmasterMail` | The mail of the webmaster. Used by Let's Encrypt to conact you when something related to your certificates happens(about to be renewed...). | `string` | ✔️ Required |
+| `cookieSecret` | This secret is used to obfuscate the session ID of the user saved in the cookie. Only the ID of the session is saved on the client side, not the actual data. If this secret is weak or compromised in any other way users can trivially pose as other users and access their session data. | `string` | ✔️ Required |
 | `isDevelopment` | If this server running in development mode? Development mode servers do not compress, do not request valid SSL certificates and trust invalid SSL certificates. | `boolean` | `false` |
 | `certs` | The certificates your server uses. You can either use Let's Encrypt or your your own certificates(e.g. if you are running in a company internal network). Keep in mind that when using manually generated certificates, `key` and `cert` must contain the certificate & key file contents, not their file paths. | `"letsEncrypt" | { key: string, cert: string, allowUnsigned: boolean }` | `"letsEncrypt"` |
 | `letsEncryptCertDirectory` | When using Let's Encrypt certificates, this is where they will be stored. Must be a directory with write access. | `string` | `"./.certs/"` |
