@@ -195,4 +195,4 @@ const createDefaultOptions = ({
 
 const defaultDebug = (level: string, ...args: any[]) => console.log("[" + level + "]", "🏰 ", ...args);
 
-module.exports = Server;
+export default Server;

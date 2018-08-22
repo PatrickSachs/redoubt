@@ -1,4 +1,4 @@
-const Server = require("../dist");
+const Server = require("../dist").default;
 const path = require("path");
 const fs = require("fs");
 // Pass some options!
