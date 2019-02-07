@@ -4,7 +4,7 @@ const fs = require("fs");
 // Pass some options!
 const instance = new Server({
   name: "my-redoubt-server",
-  certs: {
+  ssl: {
     cert: fs.readFileSync(path.resolve(__dirname, "./server.crt")),
     key: fs.readFileSync(path.resolve(__dirname, "./key.pem")),
     allowUnsigned: true

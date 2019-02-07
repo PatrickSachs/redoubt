@@ -57,14 +57,14 @@
             <pre class="content" style="color:black">// Pass some options! ⚙️
 const server = new Server({
   name: "my-redoubt-server",
-  certs: "letsEncrypt",
+  ssl: "letsEncrypt",
   agreeGreenlockTos: true,
   staticFiles: { 
     from: path.resolve(__dirname, "./static"), 
     serve: "/" 
   },
   cookieSecret: "maggots-at-the-party",
-  domains: ["example.org"],
+  domains: ["example.org", "www.example.org"],
   webmasterMail: "webmaster@example.org"
 });
 // Express app exposed via "app" 👍
