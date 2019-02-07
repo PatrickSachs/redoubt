@@ -4,6 +4,36 @@ import greenlock from "greenlock-express";
 import compression from "compression";
 import { EventEmitter } from "events";
 import session from "express-session";
+import net from "net";
+import http from "http";
+import https from "https";
+
+type DestroyFunction = (cb?: Function) => HttpOrHttpsServer;
+type HttpOrHttpsServer = (http.Server | https.Server) & { destroy?: DestroyFunction };
+
+// enableDestroy(server) is based on https://github.com/isaacs/server-destroy
+const enableDestroy = (server0: http.Server | https.Server) => {
+  const server: HttpOrHttpsServer = server0 as HttpOrHttpsServer;
+  const connections: { [key: string]: net.Socket } = {}
+
+  server.on('connection', function (conn: net.Socket) {
+    const key = conn.remoteAddress + ':' + conn.remotePort;
+    connections[key] = conn;
+    conn.once('close', function () {
+      delete connections[key];
+    });
+  });
+
+  server.destroy = function (cb) {
+    server.close(cb);
+    for (let key in connections) {
+      connections[key].destroy();
+    }
+    return server;
+  };
+
+  return server;
+}
 
 class Server extends EventEmitter {
   constructor(options: Partial<IOptions>) {
@@ -16,7 +46,7 @@ class Server extends EventEmitter {
 
   private _options: IOptions;
   private _app: express.Express;
-  private _server: any = null;
+  private _server: HttpOrHttpsServer[] = [];
   private _portHttp: number | null = null;
   private _portHttps: number | null = null;
 
@@ -30,7 +60,34 @@ class Server extends EventEmitter {
     return this._app;
   }
 
+  public get server() {
+    return this._server;
+  }
+
   // Lifecycle
+
+  /**
+   * Gracefully closes this redoubt server.
+   * @param now Should the server be closed now(terminates all active connections) or wait for all active connections to terminate and then shut down?
+   */
+  public async close(now = false) {
+    this._portHttp = null;
+    this._portHttps = null;
+    const promises: Promise<HttpOrHttpsServer>[] = [];
+    for (let server of this._server) {
+      const srv = server;
+      promises.push(new Promise((resolve, reject) => {
+        const callback = (err: any) => err ? reject(err) : resolve(srv);
+        if (now && srv.destroy) {
+          srv.destroy(callback);
+        } else {
+          srv.close(callback)
+        };
+      }));
+    }
+    this._server = [];
+    return await Promise.all(promises);
+  }
 
   /**
    * Starts the server & listens on the given ports.
@@ -41,7 +98,7 @@ class Server extends EventEmitter {
     this._portHttp = http;
     this._portHttps = https;
 
-    await this.startListening();
+    return await this.startListening();
   }
 
   // ========================================
@@ -106,8 +163,8 @@ class Server extends EventEmitter {
 
   private spdyOptions() {
     return {
-      key: this._options.certs !== "letsEncrypt" ? this._options.certs.key : "- no key in let's encrypt mode -",
-      cert: this._options.certs !== "letsEncrypt" ? this._options.certs.cert : "- no cert in let's encrypt mode -"
+      key: typeof this._options.ssl !== "string" ? this._options.ssl.key : "",
+      cert: typeof this._options.ssl !== "string" ? this._options.ssl.cert : ""
     }
   }
 
@@ -118,10 +175,10 @@ class Server extends EventEmitter {
     // If we want to also listen to a HTTP fallback port and don't use greenlock(the library already has a
     // fallback mechanism built in) create a second express server that simply redirects everything to HTTPS.
     let fallback: Promise<number | null>;
-    if (this._portHttp !== null && this._options.certs !== "letsEncrypt") {
+    if (this._portHttp !== null && this._options.ssl !== "letsEncrypt" && this._options.ssl !== "none") {
       const fallbackServer = express();
       fallbackServer.get("*", (req, res) => res.redirect("https://" + req.headers.host + ":" + this._portHttps + req.url));
-      fallback = new Promise((resolve, reject) => fallbackServer.listen(this._portHttp, (err: any) => err ? reject(err) : resolve(this._portHttp)));
+      fallback = new Promise((resolve, reject) => this._server.push(enableDestroy(fallbackServer.listen(this._portHttp, (err: any) => err ? reject(err) : resolve(this._portHttp)))));
     } else {
       fallback = Promise.resolve(this._portHttp);
     }
@@ -129,19 +186,26 @@ class Server extends EventEmitter {
     // Start the HTTPS server. We either use greenlock for Let's Encrypt issued certificates, or spdy for 
     // manually generated certificates.
     let main: Promise<number | null>;
-    if (this._options.certs === "letsEncrypt") {
+    if (this._options.ssl === "letsEncrypt") {
       if (this._options.isDevelopment) {
         process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
       }
       main = new Promise((resolve, reject) => {
-        this._server = greenlock.create({ ...this.greenlockOptions(), app: this._app }).listen(this._portHttp, this._portHttps, (err: any) => err ? reject(err) : resolve(this._portHttps))
+        this._server.push(enableDestroy(greenlock.create({ ...this.greenlockOptions(), app: this._app }).listen(this._portHttp, this._portHttps, (err: any) => err ? reject(err) : resolve(this._portHttps))))
+      });
+    } else if (this._options.ssl === "none") {
+      main = new Promise((resolve, reject) => {
+        if (this._portHttp === null) {
+          return reject(new Error("Cannot listen on HTTP without HTTP port."));
+        }
+        this._server.push(enableDestroy(this._app.listen(this._portHttp, (err: any) => err ? reject(err) : resolve(this._portHttp))));
       });
     } else {
-      if (this._options.certs.allowUnsigned || this._options.isDevelopment) {
+      if (this._options.ssl.allowUnsigned || this._options.isDevelopment) {
         process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
       }
       main = new Promise((resolve, reject) => {
-        this._server = spdy.createServer(this.spdyOptions(), this._app).listen(this._portHttps, (err: any) => err ? reject(err) : resolve(this._portHttps))
+        this._server.push(enableDestroy(spdy.createServer(this.spdyOptions(), this._app).listen(this._portHttps, (err: any) => err ? reject(err) : resolve(this._portHttps))))
       });
     }
 
@@ -149,6 +213,7 @@ class Server extends EventEmitter {
       this._options.debug && this._options.debug("info", "Listening", this._portHttps, this._portHttp);
       this.emitEvent("listen")
     });
+    return this._server;
   }
 }
 
@@ -159,20 +224,20 @@ export interface IOptions {
   webmasterMail: string;
 
   isDevelopment: boolean;
-  certs: "letsEncrypt" | { key: string, cert: string, allowUnsigned: boolean };
+  ssl: "none" | "letsEncrypt" | { key: string, cert: string, allowUnsigned: boolean };
   letsEncryptCertDirectory: string;
   agreeGreenlockTos: boolean;
-  
+
   staticFiles: { from: string, serve: string } | null;
-  
+
   maxPayloadSize: number;
   debug: ((level: string, ...args: any[]) => void) | null;
-  
+
 };
 
 const createDefaultOptions = ({
   debug, isDevelopment, agreeGreenlockTos,
-  staticFiles, maxPayloadSize, name, certs, webmasterMail, domains, letsEncryptCertDirectory, cookieSecret,
+  staticFiles, maxPayloadSize, name, ssl, webmasterMail, domains, letsEncryptCertDirectory, cookieSecret,
 }: Partial<IOptions>): IOptions => {
 
   if (name === undefined) throw new Error("name is required.");
@@ -187,7 +252,7 @@ const createDefaultOptions = ({
 
     staticFiles: staticFiles === undefined ? null : staticFiles,
     maxPayloadSize: maxPayloadSize === undefined ? 100 * 1024 : maxPayloadSize,
-    certs: certs === undefined ? "letsEncrypt" : certs,
+    ssl: ssl === undefined ? "letsEncrypt" : ssl,
     letsEncryptCertDirectory: letsEncryptCertDirectory === undefined ? "./.certs/" : letsEncryptCertDirectory,
     name, webmasterMail, domains, cookieSecret
   };
