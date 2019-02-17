@@ -129,7 +129,7 @@ class Server extends EventEmitter {
         sameSite: true,
         // Don't send cookie over HTTP.
         // Use server.app.set("trust proxy", 1); when using a proxy and having problems with cookies.
-        secure: true
+        secure: this._options.ssl !== "none"
       },
       resave: false,
       // Don't save cookies if nothing has been saved in the session to comply with stricter cookie regulations.
