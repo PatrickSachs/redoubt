@@ -49,6 +49,7 @@ class Server extends EventEmitter {
   private _server: HttpOrHttpsServer[] = [];
   private _portHttp: number | null = null;
   private _portHttps: number | null = null;
+  private _host: string | null = null;
 
   // ========================================
   // PUBLIC API
@@ -94,9 +95,10 @@ class Server extends EventEmitter {
    * @param https The HTTPS port to run your server on.
    * @param http A HTTP port to also listen to. Simply redirecty to HTTPS. Set to `null` to disable.
    */
-  public async listen(https = 443, http: number | null = 80) {
+  public async listen(https = 443, http: number | null = 80, host: string | null = null) {
     this._portHttp = http;
     this._portHttps = https;
+    this._host = host;
 
     return await this.startListening();
   }
@@ -172,40 +174,78 @@ class Server extends EventEmitter {
     this._options.debug && this._options.debug("info", "Going to listen", this._portHttps, this._portHttp);
     this.emitEvent("beforeListen");
 
+    const portHttp = this._portHttp;
+    const portHttps = this._portHttps;
+
     // If we want to also listen to a HTTP fallback port and don't use greenlock(the library already has a
     // fallback mechanism built in) create a second express server that simply redirects everything to HTTPS.
     let fallback: Promise<number | null>;
-    if (this._portHttp !== null && this._options.ssl !== "letsEncrypt" && this._options.ssl !== "none") {
-      const fallbackServer = express();
-      fallbackServer.get("*", (req, res) => res.redirect("https://" + req.headers.host + ":" + this._portHttps + req.url));
-      fallback = new Promise((resolve, reject) => this._server.push(enableDestroy(fallbackServer.listen(this._portHttp, (err: any) => err ? reject(err) : resolve(this._portHttp)))));
+    if (portHttp && this._options.ssl !== "letsEncrypt" && this._options.ssl !== "none") {
+      const fallbackApp = express();
+      fallbackApp.get("*", (req, res) => res.redirect("https://" + req.headers.host + ":" + this._portHttps + req.url));
+      fallback = new Promise((resolve, reject) => {
+        let fallbackServer;
+        if (this._host) {
+          fallbackServer = fallbackApp.listen(portHttp, this._host, (err: any) => err ? reject(err) : resolve(portHttp));
+        } else {
+          fallbackServer = fallbackApp.listen(portHttp, (err: any) => err ? reject(err) : resolve(portHttp));
+        }
+        this._server.push(enableDestroy(fallbackServer))
+      });
     } else {
-      fallback = Promise.resolve(this._portHttp);
+      fallback = Promise.resolve(portHttp);
     }
 
     // Start the HTTPS server. We either use greenlock for Let's Encrypt issued certificates, or spdy for 
     // manually generated certificates.
     let main: Promise<number | null>;
     if (this._options.ssl === "letsEncrypt") {
+      // Let's Encrypt issued certificates
       if (this._options.isDevelopment) {
         process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
       }
       main = new Promise((resolve, reject) => {
-        this._server.push(enableDestroy(greenlock.create({ ...this.greenlockOptions(), app: this._app }).listen(this._portHttp, this._portHttps, (err: any) => err ? reject(err) : resolve(this._portHttps))))
+        let server;
+        if (this._host) {
+          server = greenlock
+            .create({ ...this.greenlockOptions(), app: this._app })
+            .listen(this._host + ":" + this._portHttp, this._host + ":" + this._portHttps,
+              (err: any) => err ? reject(err) : resolve(this._portHttps));
+        } else {
+          server = greenlock
+            .create({ ...this.greenlockOptions(), app: this._app })
+            .listen(this._portHttp, this._portHttps,
+              (err: any) => err ? reject(err) : resolve(this._portHttps));
+        }
+        this._server.push(enableDestroy(server))
       });
     } else if (this._options.ssl === "none") {
+      // No certificates, HTTP only.
       main = new Promise((resolve, reject) => {
         if (this._portHttp === null) {
           return reject(new Error("Cannot listen on HTTP without HTTP port."));
         }
-        this._server.push(enableDestroy(this._app.listen(this._portHttp, (err: any) => err ? reject(err) : resolve(this._portHttp))));
+        let httpServer;
+        if (this._host) {
+          httpServer = this._app.listen(this._portHttp, this._host, (err: any) => err ? reject(err) : resolve(this._portHttp));
+        } else {
+          httpServer = this._app.listen(this._portHttp, (err: any) => err ? reject(err) : resolve(this._portHttp))
+        }
+        this._server.push(enableDestroy(httpServer));
       });
     } else {
+      // Own certificate, SPDY.
       if (this._options.ssl.allowUnsigned || this._options.isDevelopment) {
         process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
       }
       main = new Promise((resolve, reject) => {
-        this._server.push(enableDestroy(spdy.createServer(this.spdyOptions(), this._app).listen(this._portHttps, (err: any) => err ? reject(err) : resolve(this._portHttps))))
+        let server;
+        if (this._host) {
+          server = spdy.createServer(this.spdyOptions(), this._app).listen(portHttps!, this._host, (err: any) => err ? reject(err) : resolve(portHttps));
+        } else {
+          server = spdy.createServer(this.spdyOptions(), this._app).listen(portHttps!, (err: any) => err ? reject(err) : resolve(portHttps));
+        }
+        this._server.push(enableDestroy(server));
       });
     }
 

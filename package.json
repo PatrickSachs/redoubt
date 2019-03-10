@@ -1,6 +1,6 @@
 {
   "name": "redoubt",
-  "version": "2.0.1",
+  "version": "2.0.2-rc1",
   "description": "redoubt is a simple, yet powerful & secure express based server.",
   "main": "index.js",
   "private": true,
