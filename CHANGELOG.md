@@ -4,6 +4,10 @@ All notable changes to this library will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) and this library adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 2.0.2-rc2
+
+- Add the `ca` parameter to add CAs for custom certificates.
+
 ## 2.0.2-rc1
 
 - Add the `host` parameter to the `listen` function to optimally bind to a host/IP. Beta feature.
