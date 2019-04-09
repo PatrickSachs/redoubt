@@ -166,7 +166,8 @@ class Server extends EventEmitter {
   private spdyOptions() {
     return {
       key: typeof this._options.ssl !== "string" ? this._options.ssl.key : "",
-      cert: typeof this._options.ssl !== "string" ? this._options.ssl.cert : ""
+      cert: typeof this._options.ssl !== "string" ? this._options.ssl.cert : "",
+      ca: typeof this._options.ssl !== "string" ? (this._options.ssl.ca || []) : []
     }
   }
 
@@ -264,7 +265,7 @@ export interface IOptions {
   webmasterMail: string;
 
   isDevelopment: boolean;
-  ssl: "none" | "letsEncrypt" | { key: string, cert: string, allowUnsigned: boolean };
+  ssl: "none" | "letsEncrypt" | { key: string, cert: string, ca?: string[], allowUnsigned: boolean };
   letsEncryptCertDirectory: string;
   agreeGreenlockTos: boolean;
 
